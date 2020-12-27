@@ -1,0 +1,150 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<style>
+
+    .inner-results strong {
+        color: #dd1515;
+        font-style: normal;
+        font-weight: normal
+    }
+
+    .pagination li {
+        margin-right: 20px;
+    }
+
+    .active {
+        font-weight: bold;
+    }
+
+    #searchKeywordInfo ul li {
+        width: 32%;
+        color: blue;
+        font-size: small;
+    }
+</style>
+
+@{
+    var count = 0L;
+    if (Model.QueryResult != null && Model.QueryResult.PageData != null)
+    {
+        count = @Model.QueryResult.PageData.TotalCount;
+    }
+
+    string resultStr = string.Empty;
+    if (count>0)
+    {
+        resultStr = $"搜索{count}条记录，用时{Model.QueryResult.PageData.Took} 毫秒. ";
+    }
+
+    int frequentSearchKWCount = 0;
+    if (Model.FrequentSearchKeyWord != null)
+    {
+        frequentSearchKWCount = Model.FrequentSearchKeyWord.Count(x => { return string.IsNullOrEmpty(x) == false; });
+    }
+}
+
+<form method="post">
+    <div class="form-group">
+        <label for="exampleInputEmail1">请输入您要查找的内容(例如：订阅行情)</label>
+        <input type="text" class="form-control" placeholder="查找内容" asp-for="KeyWord" style="width:90%;display: inline-block;">
+        <button type="submit" class="btn btn-primary" style="margin-top: -7px;width: 70px;">搜索</button>
+        <small id="emailHelp" class="form-text text-muted">
+            @resultStr   Powered by ElasticSearch + ASP.NET Core + Linux.
+        </small>
+    </div>
+
+</form>
+
+<!--显示9个最新的查询内容-->
+@if (count<=0 && frequentSearchKWCount > 0)
+{
+<div id="searchKeywordInfo">
+    <h6 style="color:maroon; text-align:center;">大家都在找：</h6>
+
+    @for (int i = 0; i < frequentSearchKWCount; i++)
+    {
+        @if ((i % 3) == 0)
+        {
+            <ul class="list-group list-group-horizontal" style="margin-top:-1px">
+                    <li class="list-group-item"><a href="/?pageIndex=1&keyword=@Model.FrequentSearchKeyWord[i]">@Model.FrequentSearchKeyWord[i]</a></li>
+                    <li class="list-group-item"><a href="/?pageIndex=1&keyword=@Model.FrequentSearchKeyWord[i + 1]">@Model.FrequentSearchKeyWord[i + 1]</a></li>
+                    <li class="list-group-item"><a href="/?pageIndex=1&keyword=@Model.FrequentSearchKeyWord[i + 2]">@Model.FrequentSearchKeyWord[i + 2]</a></li>
+            </ul>
+        }
+    }
+    </div>
+}
+
+@if (count > 0)
+{
+    <div class="container s-results margin-bottom-50" style="padding-left:0px">
+
+        @foreach (var item in Model.QueryResult.Documents)
+        {
+            <div class="inner-results">
+                @{
+                    var title = item.FileName;
+
+                    //显示的内容
+                    var fileContent = item.FileContentHighlight;
+
+                    if (string.IsNullOrEmpty(fileContent))
+                    {
+                        continue;
+                    }
+                }
+                <h3><a href="./FileDetail?fullFileName=@item.FullFileName&keyword=@Model.KeyWord&pageIndex=@Model.CurPageIndexFrom0" target="_blank">@Html.Raw(title)</a></h3>
+
+                <p>@Html.Raw(fileContent)</p>
+
+                <ul class="list-inline down-ul">
+                    <li style="color:forestgreen">位置 @item.FullFileName</li>
+                </ul>
+            </div>
+
+            <hr>
+        }
+
+        <div class="margin-bottom-30"></div>
+
+        @{
+            var prePage = 0L;
+            var nextPage = 0L;
+            var totalPage = 0L;
+            prePage = Model.QueryResult.PageData.PageIndex == 1 ? 1 : Model.QueryResult.PageData.PageIndex - 1;
+            nextPage = Model.QueryResult.PageData.PageIndex == Model.QueryResult.PageData.TotalPage ? Model.QueryResult.PageData.TotalPage : Model.QueryResult.PageData.PageIndex + 1;
+            totalPage = Model.QueryResult.PageData.TotalPage > 200 ? 200 : Model.QueryResult.PageData.TotalPage;
+        }
+
+        <div class="text-left">
+            <ul class="pagination">
+                <li><a href="/?pageIndex=1&keyword=@Model.KeyWord">首页</a></li>
+                <li><a href="/?pageIndex=@prePage&keyword=@Model.KeyWord">上一页</a></li>
+
+                @{
+                    //显示所有的页号
+                    for (int i = 1; i <= @Model.QueryResult.PageData.TotalPage; i++)
+                    {
+                        if (i == Model.QueryResult.PageData.PageIndex)
+                        {
+                            <li class="active"><a href="#">@Model.QueryResult.PageData.PageIndex</a></li>
+                        }
+                        else
+                        {
+                            <li><a href="/?pageIndex=@i&keyword=@Model.KeyWord">@i</a></li>
+                        }
+
+                    }
+                }
+                <li><a href="/?pageIndex=@nextPage&keyword=@Model.KeyWord">下一页</a></li>
+                <li><a href="/?pageIndex=@totalPage&keyword=@Model.KeyWord">尾页</a></li>
+            </ul>
+        </div>
+
+    </div><!--/container-->
+
+}

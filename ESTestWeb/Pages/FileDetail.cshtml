@@ -1,0 +1,165 @@
+﻿@page
+@model ESTestWeb.Pages.FileDetailModel
+@{
+}
+
+@section Scripts{
+
+
+    <script src="~/js/prettify.js"></script>
+    <script src="~/js/lang-lua.js"></script>
+    <script src="~/js/test_base.js"></script>
+    <!-- <script src="~/js/run_prettify.js"></script> -->
+
+    <script type="text/javascript">
+/**
+ * maps ids of rewritten code to the expected output.
+ * For brevity, <span class="foo"> has been changed to `FOO and </span>
+ * has been changed to `END.
+ */
+var goldens = {
+  xml: (
+      '`DEC&lt;!DOCTYPE series PUBLIC "fibonacci numbers"&gt;`END`PLN\n' +
+      '\n' +
+      '`END`TAG&lt;series.root`END`PLN `END`ATNbase`END`PUN=`END' +
+          '`ATV"1"`END`PLN `END' +
+          '`ATNstep`END`PUN=`END`ATV"s(n-2) + s(n-1)"`END`TAG&gt;`END' +
+          '`PLN\n' +
+      '  `END`TAG&lt;element`END`PLN `END`ATNi`END`PUN=`END' +
+          '`ATV"0"`END' +
+          '`TAG&gt;`END`PLN1`END`TAG&lt;/element&gt;`END' +
+          '`PLN\n' +
+      '  `END`TAG&lt;element`END`PLN `END`ATNi`END`PUN=`END' +
+          '`ATV"1"`END' +
+          '`TAG&gt;`END`PLN1`END`TAG&lt;/element&gt;`END' +
+          '`PLN\n' +
+      '  `END`TAG&lt;element`END`PLN `END`ATNi`END`PUN=`END' +
+          '`ATV"2"`END' +
+          '`TAG&gt;`END`PLN2`END`TAG&lt;/element&gt;`END' +
+          '`PLN\n' +
+      '  `END`TAG&lt;element`END`PLN `END`ATNi`END`PUN=`END' +
+          '`ATV"3"`END' +
+          '`TAG&gt;`END`PLN3`END`TAG&lt;/element&gt;`END' +
+          '`PLN\n' +
+      '  `END`TAG&lt;element`END`PLN `END`ATNi`END`PUN=`END' +
+          '`ATV"4"`END' +
+          '`TAG&gt;`END`PLN5`END`TAG&lt;/element&gt;`END' +
+          '`PLN\n' +
+      '  `END`TAG&lt;element`END`PLN `END`ATNi`END`PUN=`END' +
+          '`ATV"5"`END' +
+          '`TAG&gt;`END`PLN8`END`TAG&lt;/element&gt;`END' +
+          '`PLN\n' +
+      '  ...\n' +
+      '`END`TAG&lt;/series.root&gt;`END'),
+  issue24: (
+      '`PLNos`END`PUN=`END`PLNrequire`END`PUN(`END`STR"os"`END`PUN)`END`PLN\n' +
+      'math`END`PUN=`END`PLNrequire`END`PUN(`END`STR"math"`END`PUN)`END`PLN\n' +
+      '\n' +
+      '`END`COM-- Examples from the language reference`END`PLN\n' +
+      '     a `END`PUN=`END`PLN `END`STR\'alo\\n123"\'`END' +
+          '`PLN\n' +
+      '     a `END`PUN=`END`PLN `END`STR"alo\\n123\\""`END' +
+          '`PLN\n' +
+      '     a `END`PUN=`END`PLN `END' +
+          '`STR\'\\97lo\\10\\04923"\'`END`PLN\n' +
+      '     a `END`PUN=`END`PLN `END`STR[[alo\n' +
+      '     123"]]`END`PLN\n' +
+      '     a `END`PUN=`END`PLN `END`STR[==[\n' +
+      '     alo\n' +
+      '     123"]==]`END`PLN\n' +
+      '\n' +
+      '`END`LIT3`END`PLN   `END`LIT3.0`END`PLN   `END`LIT3.1416`END' +
+          '`PLN   `END`LIT314.16e-2`END`PLN   `END`LIT0.31416E1`END' +
+          '`PLN   `END`LIT0xff`END`PLN   `END`LIT0x56`END`PLN\n' +
+      '\n' +
+      '`END`COM-- Some comments that demonstrate long brackets`END`PLN\n' +
+      'double_quoted `END`PUN=`END`PLN `END`STR"Not a long bracket [=["`END' +
+          '`PLN\n' +
+      '`END`COM--[=[ quoting out\n' +
+      ' [[ foo ]]\n' +
+      ' [==[does not end comment either]==]\n' +
+      ']=]`END`PLN\n' +
+      'past_end_of_comment\n' +
+      '`END`COM--]=]`END`PLN\n' +
+      '\n' +
+      '`END`COM-- Example code courtesy Joseph Harmbruster`END`PLN\n' +
+      '`END`PUN#`END`PLN\n' +
+      '`END`KWDdo`END`PLN\n' +
+      '  `END`KWDlocal`END`PLN `END`KWDfunction`END`PLN ssgeneral`END' +
+          '`PUN(`END`PLNt`END`PUN,`END`PLN n`END`PUN,`END`PLN before`END' +
+          '`PUN)`END`PLN\n' +
+      '    `END`KWDfor`END`PLN _`END`PUN,`END`PLN h `END`KWDin`END' +
+          '`PLN ipairs`END`PUN(`END`PLNincs`END`PUN)`END`PLN `END`KWDdo`END' +
+          '`PLN\n' +
+      '      `END`KWDfor`END`PLN i `END`PUN=`END`PLN h `END' +
+          '`PUN+`END`PLN `END`LIT1`END`PUN,`END`PLN n `END`KWDdo`END`PLN\n' +
+      '        `END`KWDlocal`END`PLN v `END`PUN=`END' +
+          '`PLN t`END`PUN[`END`PLNi`END`PUN]`END`PLN\n' +
+      '        `END`KWDfor`END`PLN j `END`PUN=`END' +
+          '`PLN i `END`PUN-`END`PLN h`END`PUN,`END`PLN `END`LIT1`END`PUN,`END' +
+          '`PLN `END`PUN-`END`PLNh `END`KWDdo`END`PLN\n' +
+      '          `END`KWDlocal`END`PLN testval `END' +
+          '`PUN=`END`PLN t`END`PUN[`END`PLNj`END`PUN]`END`PLN\n' +
+      '          `END`KWDif`END`PLN `END`KWDnot`END' +
+          '`PLN before`END`PUN(`END`PLNv`END`PUN,`END`PLN testval`END' +
+          '`PUN)`END`PLN `END`KWDthen`END`PLN `END`KWDbreak`END`PLN `END' +
+          '`KWDend`END`PLN\n' +
+      '          t`END`PUN[`END`PLNi`END`PUN]`END' +
+          '`PLN `END`PUN=`END`PLN testval`END`PUN;`END`PLN i `END`PUN=`END' +
+          '`PLN j\n' +
+      '        `END`KWDend`END`PLN\n' +
+      '        t`END`PUN[`END`PLNi`END`PUN]`END`PLN `END' +
+          '`PUN=`END`PLN v\n' +
+      '      `END`KWDend`END`PLN \n' +
+      '    `END`KWDend`END`PLN\n' +
+      '    `END`KWDreturn`END`PLN t\n' +
+      '  `END`KWDend`END`PLN\n' +
+      '\n' +
+      '  `END`KWDfunction`END`PLN shellsort`END`PUN(`END`PLNt`END' +
+          '`PUN,`END`PLN before`END`PUN,`END`PLN n`END`PUN)`END`PLN\n' +
+      '    n `END`PUN=`END`PLN n `END`KWDor`END`PLN `END`PUN#`END' +
+          '`PLNt\n' +
+      '    `END`KWDif`END`PLN `END`KWDnot`END`PLN before `END' +
+          '`KWDor`END`PLN before `END`PUN==`END`PLN `END`STR"&lt;"`END' +
+          '`PLN `END`KWDthen`END`PLN `END`KWDreturn`END`PLN ssup`END`PUN(`END' +
+          '`PLNt`END`PUN,`END`PLN n`END`PUN)`END`PLN\n' +
+      '    `END`KWDelseif`END`PLN before `END`PUN==`END`PLN `END' +
+          '`STR"&gt;"`END`PLN `END`KWDthen`END`PLN `END`KWDreturn`END' +
+          '`PLN ssdown`END`PUN(`END`PLNt`END`PUN,`END`PLN n`END`PUN)`END' +
+          '`PLN\n' +
+      '    `END`KWDelse`END`PLN `END`KWDreturn`END' +
+          '`PLN ssgeneral`END`PUN(`END`PLNt`END`PUN,`END`PLN n`END`PUN,`END' +
+          '`PLN before`END`PUN)`END`PLN\n' +
+      '    `END`KWDend`END`PLN\n' +
+      '  `END`KWDend`END`PLN\n' +
+      '  `END`KWDreturn`END`PLN shellsort\n' +
+      '`END`KWDend`END')
+};
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            go(goldens);
+        });
+
+    </script>
+
+
+
+}
+
+@section styles{
+    <link rel="stylesheet" href="~/css/prettify.css">
+    <link rel="stylesheet" href="~/css/test_styles.css">
+}
+
+<div>
+
+    <div>
+        <span style="font-weight:bold">@Model.FileName</span>
+        <span>&nbsp;(@Model.FullFileName)</span>
+    </div>
+
+    <pre class="prettyprint lang-lua"  id="issue24">@Model.FileContent</pre>
+
+</div>

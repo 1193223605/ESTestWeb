@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ESTestL": {
+      "commandName": "Project",
+      "commandLineArgs": "E:\\workshop\\ESTest\\QG测试文件"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+﻿@page
+@addTagHelper*, Microsoft.AspNetCore.Mvc.TagHelpers
+@model ESTestWeb.Pages.LoginModel
+
+@Html.AntiForgeryToken()
+
+@section Scripts{
+
+    <script>
+        $(function () {
+            $(document).keydown(function (e) {
+                if (e.keyCode == 13) {
+                    dologin();
+                }
+            });
+            $("#btnLogin").click(function () {
+                dologin();
+            });
+            function dologin() {
+                var username = $("#txtUsername").val();
+                var password = $("#txtPassword").val();
+                //var txtCode = $("#txtCode").val();
+                if (username == "") {
+                    alert('账号不能为空');
+                    $("#txtUsername").focus();
+                    return;
+                }
+                if (password == "") {
+                    alert('密码不能为空!');
+                    $("#txtPassword").focus();
+                    return;
+                }
+
+                $.ajax({
+                    type: 'post',
+                    dataType: 'json',
+                    timeout: 30000,
+                    url: 'Login?handler=Login',
+                    headers: {
+                        RequestVerificationToken:
+                            $('input:hidden[name="__RequestVerificationToken"]').val()
+                    },
+                    data: {
+                        "userID": username,
+                        "password": password
+                    },
+                    success: function (result) {
+                        if (result.success) {
+                            top.location.href = "./Index";
+                        } else {
+                            //alert(result.returnMessage);
+                            $(".alert").show();
+                            $("#btnLogin").attr("disabled", false).val('登录');
+                        }
+                    },
+                    error: function (err) {
+                        //alert(err['responseText']);
+                        $("#btnLogin").attr("disabled", false).val('登录');
+                    },
+                    beforeSend: function () {
+                        $("#btnLogin").attr("disabled", true).val('登录中…');
+                    },
+                    complete: function (XMLHttpRequest, textStatus) {
+                        XMLHttpRequest = null;
+                    }
+                })
+            }
+        });
+
+
+    </script>
+}
+
+@{
+    ViewData["Title"] = "Login Page";
+
+}
+
+<!-- <h1>@ViewData["Title"]</h1>  -->
+
+<div class="alert alert-info" style="width:50%">可以使用账号：001，密码：1111 或者 账号：999，密码：1111 登录</div>
+
+<div class="alert alert-warning" style="display: none; width:50%;">
+    <a href="#" class="close" data-dismiss="alert">
+        &times;
+    </a>
+    <strong>提示！</strong>您输入的用户名或密码错误。
+</div>
+
+<div style="height:80px">
+</div>
+
+<h1>@Model.Title    </h1>
+
+<form style="width:50%">
+
+    <div class="form-group">
+        <label for="txtUsername">账号：</label>
+        <input type="text" class="form-control" name="UserID" id="txtUsername" maxlength="3" asp-for="UserID" />
+        <span asp-validation-for="UserID"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="txtPassword">密码：</label>
+        <input type="password" class="form-control" autocomplete="off" name="Password" id="txtPassword" maxlength="20" asp-for="Password" />
+        <span asp-validation-for="Password"></span>
+    </div>
+
+    <input type="submit" id="btnLogin" value="登录" class="btn btn-primary" />
+
+    <div style="height:80px">
+    </div>
+
+    <hr>
+
+    <div>
+        <p>如果遇到系统问题，请联系网络管理员，联系电话：13818727301 </p>
+    </div>
+
+    <div id="logincopyright">Copyright © 2020 GFQG量化研发组 </div>
+</form>
+
+
