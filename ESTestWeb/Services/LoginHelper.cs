@@ -1,4 +1,6 @@
-﻿using ESTestWeb.Tools;
+﻿using Dapper;
+using ESTestWeb.Model;
+using ESTestWeb.Tools;
 using SLSM.Web.DTSWeb;
 using System;
 using System.Collections.Generic;
@@ -16,37 +18,40 @@ namespace ESTestWeb.Services
         public bool LoginUser(string userID, string password,out string userName)
         {
             userName = string.Empty;
-            
-            string sql = @"select * from UserInfo where UserID = '{0}'";
-            sql = string.Format(sql, userID);
-            DataSet ds = DbHelperMySQL.GetInstance().Query(sql);
-
-            if (ds.Tables[0].Rows.Count<=0)
+            using (IDbConnection conn = DbHelperMySQL.GetDbConnection())
             {
-                log.InfoFormat("数据库中不存在{0}的用户信息", userID);
-                return false;
+                string sql = @"select * from UserInfo where UserID = @UserID";
+                
+                var user = conn.Query<UserInfo>(sql,new { UserID = userID}).FirstOrDefault<UserInfo>();
+
+                if (string.IsNullOrEmpty(user.UserID))
+                {
+                    log.InfoFormat("数据库中不存在{0}的用户信息", userID);
+                    return false;
+                }
+
+                userName = user.UserName;
+
+                return user.Password.Equals(password);
             }
-
-            userName = ds.Tables[0].Rows[0]["UserName"].ToString();
-
-            string pwd_DB = ds.Tables[0].Rows[0]["Password"].ToString();
-
-            return pwd_DB.Equals(password);
         }
 
         public string GetEmptyUserID4Register()
         {
-            string sql = @"select * from UserInfo where UserID not like '9%' order by UserID";
-            DataSet ds = DbHelperMySQL.GetInstance().Query(sql);
+            using (IDbConnection conn = DbHelperMySQL.GetDbConnection())
+            {
+                string sql = @"select UserID from UserInfo where UserID not like '9%' order by UserID";
+                var userList = conn.Query<UserInfo>(sql);
 
-            int cnt = ds.Tables[0].Rows.Count - 1;
-            string maxUserID = ds.Tables[0].Rows[cnt]["UserID"].ToString();
+                var user = userList.LastOrDefault();
 
-            //maxUserID+1
-            int i = DTSTools.ConvertToInt(maxUserID, 0);
-            i++;
+                //maxUserID+1
+                int i = DTSTools.ConvertToInt(user.UserID, 0);
+                i++;
 
-            return i.ToString("000");
+                return i.ToString("000");
+            }
+
         }
 
         public bool RegisterNewUser(string userID,string userName,string password,out string errMsg)
@@ -56,21 +61,24 @@ namespace ESTestWeb.Services
             string createTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             string reserveString = $"创建时间:{createTime}";
 
-            string sql = @"replace into UserInfo(UserID,UserName,Password,ReserveString) values('{0}','{1}','{2}','{3}')";
-            sql = string.Format(sql, userID, userName, password, reserveString);
-            
-            try
-            { 
-                int cnt = DbHelperMySQL.GetInstance().ExecuteNonQuery(sql);
-
-                return true;
-            }
-            catch(Exception ex)
+            using (IDbConnection conn = DbHelperMySQL.GetDbConnection())
             {
-                log.Error(ex);
-                errMsg = ex.Message;
-                return false;
+                UserInfo user = new UserInfo()
+                {
+                    UserID = userID,
+                    UserName = userName,
+                    Password = password,
+                    ReserveString = reserveString,
+                };
+                int cnt = conn.Execute(@"replace into UserInfo(UserID,UserName,Password,ReserveString) values(@UserID,@UserName,@Password,@ReserveString)", user);
+
+                if (cnt>0)
+                {
+                    return true;
+                }
             }
+
+            return false;
             
         }
     }

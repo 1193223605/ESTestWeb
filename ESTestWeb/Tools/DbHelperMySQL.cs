@@ -20,7 +20,7 @@ namespace SLSM.Web.DTSWeb
 
         //数据库连接字符串(web.config来配置)，可以动态更改connectionString支持多数据库.		
         //public static string connectionString = ConfigurationManager.ConnectionStrings["TestClientConnstring"].ConnectionString;
-        public string connectionString = string.Empty;
+        public string m_connectionString = string.Empty;
 
         public static string DefaultConnectionString = string.Empty;
 
@@ -68,41 +68,23 @@ namespace SLSM.Web.DTSWeb
             return m_InstanceDic[connStr].DBHelper;
         }
 
-        private static void DisposeUselessDbHelper()
+        /// <summary>
+        /// 获取mysql连接
+        /// </summary>
+        /// <returns></returns>
+        public static MySqlConnection GetDbConnection()
         {
-            try
-            {
-                List<string> toDeleted = new List<string>();
-                foreach (KeyValuePair<string, DBHelperInfo> item in m_InstanceDic)
-                {
-                    TimeSpan timeSpan = DateTime.Now - item.Value.LastUsedTime;
-                    if (timeSpan.Seconds >= 30)
-                    {
-                        toDeleted.Add(item.Key);
-                    }
-                }
-                foreach (string sessionID in toDeleted)
-                {
-                    if (m_InstanceDic.ContainsKey(sessionID) == true &&
-                        m_InstanceDic[sessionID] != null &&
-                        m_InstanceDic[sessionID].DBHelper != null)
-                    {
-                        m_InstanceDic[sessionID].DBHelper.DisposeResource();
-                        m_InstanceDic.Remove(sessionID);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-            }
+            var connection = new MySqlConnection(DefaultConnectionString);
+            connection.Open();
+            return connection;
         }
+
+        
 
         /// <summary>
         /// 一个静态的DbHelperMySQL，主要是为了Transaction用的
         /// </summary>
-        //private MySqlConnection m_connection = new MySqlConnection(connectionString);
-        private MySqlConnection m_connection = null;
+        
         private MySqlTransaction m_trans = null;
 
         private object objLock = new object();
@@ -124,288 +106,32 @@ namespace SLSM.Web.DTSWeb
         //    ExecuteNonQuery(sql);
         //}
 
-        public void StartTrans()
-        {
-            bool br = Monitor.TryEnter(this.objLock, 5000);
-
-            if (br == false)
-            {
-                log.Info("can not get lock");
-                return;
-            }
-
-            m_connection = this.GetConnection();
-
-            try
-            {
-                //if (m_connection.State != ConnectionState.Open)
-                //{
-                //    m_connection.Open();
-                //}
-                //else
-                //{
-                //    m_connection.Close();
-                //    m_connection.Open();
-                //}
-
-                m_trans = m_connection.BeginTransaction();
-            }
-            catch (Exception e)
-            {
-                log.Error(e);
-
-                m_connection = this.NewConnect(m_connection);
-                m_trans = m_connection.BeginTransaction();
-
-            }
-            finally
-            {
-                Monitor.Exit(this.objLock);
-            }
-        }
-
-        public void CommitTrans()
-        {
-            bool br = Monitor.TryEnter(this.objLock, 5000);
-
-            if (br == false)
-            {
-                log.Info("can not get lock");
-                return;
-            }
-
-            try
-            {
-                if (m_trans == null)
-                {
-                    log.Info("m_trans == null,re connect mysql");
-                }
-                else
-                {
-                    m_trans.Commit();
-                    m_connection.Close();
-                    m_trans = null;
-                }
-            }
-            catch (Exception e)
-            {
-                log.Error(e);
-            }
-            finally
-            {
-                Monitor.Exit(this.objLock);
-            }
-
-        }
-
-        public void RollBackTrans()
-        {
-            bool br = Monitor.TryEnter(this.objLock, 5000);
-
-            if (br == false)
-            {
-                log.Info("can not get lock");
-                return;
-            }
-
-            try
-            {
-                if (m_trans == null)
-                {
-                    log.Info("m_trans == null,re connect mysql");
-                }
-                else
-                {
-                    m_trans.Rollback();
-                    m_connection.Close();
-                    m_trans = null;
-                }
-            }
-            catch (Exception e)
-            {
-                log.Error(e);
-            }
-            finally
-            {
-                Monitor.Exit(this.objLock);
-            }
-        }
-
         public void DisposeResource()
         {
-            if (m_connection != null)
-            {
-                m_connection.Close();
-            }
-
-            //if (mscBackstage != null)
-            //{
-            //    mscBackstage.Close();
-            //}
+            
         }
 
         private DbHelperMySQL(string connStrName)
         {
             //connectionString = ConfigurationManager.ConnectionStrings[connStrName].ConnectionString;
-            connectionString = connStrName;
+            m_connectionString = connStrName;
 
-            try
-            {
-                m_connection = new MySqlConnection(connectionString);
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-            }
         }
 
         public MySqlConnection GetConnection()
         {
-            return GetConnection(this.m_connection);
-        }
-
-        private void SetCmdTransaction(MySqlCommand cmd)
-        {
-            if (m_trans != null)
-            {
-                cmd.Transaction = m_trans;
-            }
-        }
-
-        private void CloseConnectionWithoutTrans(MySqlConnection connection)
-        {
-            if (m_trans == null)
-            {
-                try
-                {
-                    connection.Close();
-                }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                    connection = this.NewConnect(connection);
-                }
-            }
+            MySqlConnection conn = new MySqlConnection(m_connectionString);
+            conn.Open();
+            return conn;
         }
 
         private void ReturnConnection(MySqlConnection connection)
         {
-            return;
-            if (m_trans == null)
-            {
-                if (connection.State == ConnectionState.Open)
-                {
-                    connection.Close();
-                }
-            }
+            connection.Close();
+            connection = null;
         }
 
-        /**
-        public static string csBackstage = ConfigurationManager.ConnectionStrings["BackstageMySQLConnstring"].ConnectionString;
-        private MySqlConnection mscBackstage;
-        public MySqlConnection MscBackstage
-        {
-            get
-            {
-                if (mscBackstage == null)
-                {
-                    lock (objLock)
-                    {
-                        if (mscBackstage == null)
-                        {
-                            mscBackstage = new MySqlConnection(csBackstage);
-                            ExecuteNonQueryBackstage("SET NAMES 'latin1';");
-                        }
-                    }
-                }
-
-                return mscBackstage;
-            }
-        }
-         * */
-
-        private MySqlConnection GetConnection(MySqlConnection msc)
-        {
-            bool br = Monitor.TryEnter(this.objLock, 5000);
-
-            if (br == false)
-            {
-                log.Info("can not get lock");
-                return msc;
-            }
-
-            try
-            {
-                if (msc.State == ConnectionState.Broken)
-                {
-                    msc.Close();
-                    msc.Open();
-                }
-                else if (msc.State == ConnectionState.Closed)
-                {
-                    msc.Open();
-                }
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex);
-
-                msc = this.NewConnect(msc);
-
-            }
-            finally
-            {
-                Monitor.Exit(this.objLock);
-            }
-
-            return msc;
-        }
-
-        MySqlConnection NewConnect(MySqlConnection msc)
-        {
-            int times=0;
-            do
-            {
-                log.Info("new Connection");
-                try
-                {
-                    msc = new MySqlConnection(connectionString);
-                    this.m_trans = null;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                }
-                times++;
-                Thread.Sleep(500);
-            } while (times < 10);
-
-            return msc;
-        }
-
-        //public static string csZGRisk = ConfigurationManager.ConnectionStrings["ZGRiskMySQLConnstring"].ConnectionString;
-        //private MySqlConnection mscZGRisk;
-        //public MySqlConnection MscZGRisk
-        //{
-        //    get
-        //    {
-        //        if (mscZGRisk == null)
-        //        {
-        //            lock (objLock)
-        //            {
-        //                if (mscZGRisk == null)
-        //                {
-        //                    mscZGRisk = new MySqlConnection(csZGRisk);
-        //                    ExecuteNonQueryZGRisk("SET NAMES 'latin1';");
-        //                }
-        //            }
-        //        }
-
-        //        return mscZGRisk;
-        //    }
-        //}
-
+        
         #region  执行简单SQL语句
 
         ///// <summary>
@@ -464,7 +190,6 @@ namespace SLSM.Web.DTSWeb
                     try
                     {
                         cmd.CommandTimeout = 1000 * 60 * 3;
-                        SetCmdTransaction(cmd);
                         int rows = cmd.ExecuteNonQuery();
                         return rows;
                     }
@@ -472,7 +197,6 @@ namespace SLSM.Web.DTSWeb
                     catch (Exception e)
                     {
                         log.Error(e);
-                        CloseConnectionWithoutTrans(connection);
                         //return 0;
                         throw e;
                     }
@@ -504,7 +228,6 @@ namespace SLSM.Web.DTSWeb
                 {
                     try
                     {
-                        SetCmdTransaction(cmd);
                         cmd.CommandTimeout = Times;
                         int rows = cmd.ExecuteNonQuery();
                         return rows;
@@ -513,7 +236,6 @@ namespace SLSM.Web.DTSWeb
                     catch (Exception e)
                     {
                         log.Error(e);
-                        CloseConnectionWithoutTrans(connection);
                         //return 0;
                         throw e;
                     }
@@ -591,7 +313,6 @@ namespace SLSM.Web.DTSWeb
                 cmd.Parameters.Add(myParameter);
                 try
                 {
-                    SetCmdTransaction(cmd);
                     int rows = cmd.ExecuteNonQuery();
                     return rows;
                 }
@@ -599,7 +320,6 @@ namespace SLSM.Web.DTSWeb
                 catch (Exception e)
                 {
                     log.Error(e);
-                    CloseConnectionWithoutTrans(connection);
                     //return 0;
                     throw e;
                 }
@@ -635,7 +355,6 @@ namespace SLSM.Web.DTSWeb
                 {
                     try
                     {
-                        SetCmdTransaction(cmd);
                         object obj = cmd.ExecuteScalar();
                         if ((Object.Equals(obj, null)) || (Object.Equals(obj, System.DBNull.Value)))
                         {
@@ -650,7 +369,6 @@ namespace SLSM.Web.DTSWeb
                     catch (Exception e)
                     {
                         log.Error(e);
-                        CloseConnectionWithoutTrans(connection);
                         throw e;
                         //return null;
                     }
@@ -685,7 +403,6 @@ namespace SLSM.Web.DTSWeb
             MySqlCommand cmd = new MySqlCommand(strSQL, connection);
             try
             {
-                SetCmdTransaction(cmd);
                 MySqlDataReader myReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
                 return myReader;
             }
@@ -693,7 +410,6 @@ namespace SLSM.Web.DTSWeb
             catch (Exception e)
             {
                 log.Error(e);
-                CloseConnectionWithoutTrans(connection);
                 throw e;
                 //return 0;
             }
@@ -792,7 +508,6 @@ namespace SLSM.Web.DTSWeb
             catch(Exception ex)
             {
                 log.Error(ex);
-                CloseConnectionWithoutTrans(connection);
                 throw new Exception(ex.Message);
             }
             finally
@@ -848,7 +563,6 @@ namespace SLSM.Web.DTSWeb
             catch (Exception ex)
             {
                 log.Error(ex);
-                CloseConnectionWithoutTrans(connection);
                 throw new Exception(ex.Message);
             }
             finally
@@ -933,7 +647,6 @@ namespace SLSM.Web.DTSWeb
                     catch (Exception e)
                     {
                         log.Error(e);
-                        CloseConnectionWithoutTrans(connection);
                         throw e;
                     }
                     finally
@@ -1099,7 +812,6 @@ namespace SLSM.Web.DTSWeb
                     catch (Exception e)
                     {
                         log.Error(e);
-                        CloseConnectionWithoutTrans(connection);
                         throw e;
                     }
                     finally
@@ -1141,7 +853,6 @@ namespace SLSM.Web.DTSWeb
             catch (Exception e)
             {
                 log.Error(e);
-                CloseConnectionWithoutTrans(connection);
                 throw e;
             }
             finally
@@ -1220,7 +931,6 @@ namespace SLSM.Web.DTSWeb
                     catch(Exception ex)
                     {
                         log.Error(ex);
-                        CloseConnectionWithoutTrans(connection);
                         throw new Exception(ex.Message);
                     }
                     finally
@@ -1237,7 +947,6 @@ namespace SLSM.Web.DTSWeb
         private void PrepareCommand(MySqlConnection connection, MySqlCommand cmd, string cmdText, MySqlParameter[] cmdParms)
         {
             //CheckConnection();
-            SetCmdTransaction(cmd);
             cmd.Connection = connection;
             cmd.CommandText = cmdText;
             cmd.CommandType = CommandType.Text;//cmdType;
@@ -1290,7 +999,6 @@ namespace SLSM.Web.DTSWeb
             catch (Exception ex)
             {
                 log.Error(ex);
-                CloseConnectionWithoutTrans(connection);
                 throw ex;
             }
             finally
@@ -1334,7 +1042,6 @@ namespace SLSM.Web.DTSWeb
                     catch (Exception ex)
                     {
                         log.Error(ex);
-                        CloseConnectionWithoutTrans(connection);
                         throw ex;
                     }
                     finally
@@ -1361,7 +1068,6 @@ namespace SLSM.Web.DTSWeb
             MySqlCommand command = new MySqlCommand(storedProcName, connection);
             command.CommandTimeout = 300;
             command.CommandType = CommandType.StoredProcedure;
-            SetCmdTransaction(command);
             foreach (MySqlParameter parameter in parameters)
             {
                 if (parameter != null)
@@ -1411,7 +1117,6 @@ namespace SLSM.Web.DTSWeb
                 catch (Exception ex)
                 {
                     log.Error(ex);
-                    CloseConnectionWithoutTrans(connection);
                     throw ex;
                 }
                 finally
@@ -1466,7 +1171,6 @@ namespace SLSM.Web.DTSWeb
                 catch (Exception ex)
                 {
                     log.Error(ex);
-                    CloseConnectionWithoutTrans(connection);
                     throw ex;
                 }
                 finally

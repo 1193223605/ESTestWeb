@@ -1,4 +1,6 @@
-﻿using Nest;
+﻿using Dapper;
+using ESTestWeb.Model;
+using Nest;
 using SLSM.Web.DTSWeb;
 using System;
 using System.Collections.Generic;
@@ -18,18 +20,18 @@ namespace ESTestWeb.Tools
         {
             string[] items = new string[9] { "", "", "", "", "", "", "", "", "" };
 
-            try
+            using (IDbConnection conn = DbHelperMySQL.GetDbConnection())
             { 
                 //查最近9条经常被查询的关键字
                 string sql = @$"select * from FrequentSearchKeyword where ESIndexName = '{ESTest.control.SSSourceFilesHelper.ESINDEXNAME}' 
         order by Count desc,LastSearchTime desc limit 9";
-                
-                DataSet ds = DbHelperMySQL.GetInstance().Query(sql);
+
+                var kwList = conn.Query<FrequentSearchKeyword>(sql);
 
                 int i = 0;
-                foreach(DataRow dr in ds.Tables[0].Rows)
+                foreach(var kw in kwList)
                 {
-                    items[i++] = dr["KeyWord"].ToString();
+                    items[i++] = kw.KeyWord;
 
                     if (i>=9)
                     {
@@ -37,10 +39,7 @@ namespace ESTestWeb.Tools
                     }
                 }
             }
-            catch(Exception ex)
-            {
-                log.Error(ex);
-            }
+
             return items;
         }
 
@@ -52,32 +51,33 @@ namespace ESTestWeb.Tools
                 {
                     return false;
                 }
-                string sql = @$"select count(*) from FrequentSearchKeyword where ESIndexName = '{ESTest.control.SSSourceFilesHelper.ESINDEXNAME}' 
-                and KeyWord='{keyWord}'";
-                try
+
+                using (IDbConnection conn = DbHelperMySQL.GetDbConnection())
                 {
-                    DataSet ds = DbHelperMySQL.GetInstance().Query(sql);
-                    int cnt = DTSTools.ConvertToInt(ds.Tables[0].Rows[0][0].ToString(), 0);
+                    string sql = @$"select count(*) from FrequentSearchKeyword where ESIndexName = '{ESTest.control.SSSourceFilesHelper.ESINDEXNAME}' 
+                and KeyWord='{keyWord}'";
+
+                    int cnt = conn.Query<int>(sql).Single();
+                    log.InfoFormat("sql:{0},cnt:{1}", sql,cnt);
 
                     if (cnt == 0)
                     {
                         sql = @$"insert into FrequentSearchKeyword(ESIndexName,KeyWord,Count,LastSearchTime) 
-    values('{ESTest.control.SSSourceFilesHelper.ESINDEXNAME}','{keyWord}',1,Now())";
+values('{ESTest.control.SSSourceFilesHelper.ESINDEXNAME}','{keyWord}',1,Now())";
 
                     }
                     else
                     {
                         sql = @$"update FrequentSearchKeyword set Count=Count+1,LastSearchTime=Now() where ESIndexName = '{ESTest.control.SSSourceFilesHelper.ESINDEXNAME}' 
-                and KeyWord='{keyWord}'";
+            and KeyWord='{keyWord}'";
                     }
-                    DbHelperMySQL.GetInstance().ExecuteNonQuery(sql);
+                    
+                    cnt = conn.Execute(sql);
+                    log.InfoFormat("sql:{0},cnt:{1}", sql, cnt);
                     return true;
                 }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                    return false;
-                }
+                
+                
             });
         }
     }
