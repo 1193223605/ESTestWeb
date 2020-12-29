@@ -84,16 +84,17 @@ namespace ESTestWeb.Pages
                 m_LoginResult = "用户号或者密码错误，请重试";
                 msg.ReturnMessage = LoginResult;
             }
+            else
+            { 
+                //登陆成功，将登录信息保存到cookie
+                var claims = new[] { new Claim("UserName", userName) };
 
-            //登陆成功，将登录信息保存到cookie
-            var claims = new[] { new Claim("UserName", userName) };
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                ClaimsPrincipal user = new ClaimsPrincipal(claimsIdentity);
 
-            ClaimsPrincipal user = new ClaimsPrincipal(claimsIdentity);
-
-            HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, user);
-
+                HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, user);
+            }
             return new JsonResult(msg);
         }
     }
