@@ -49,7 +49,10 @@ namespace ESTestWeb
             {
                 option.Cookie.Name = "MyApplicationTokenCookie";//设置存储用户登录信息（用户Token信息）的Cookie名称
                 option.Cookie.HttpOnly = true;//设置存储用户登录信息（用户Token信息）的Cookie，无法通过客户端浏览器脚本(如JavaScript等)访问到
-                option.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.None;//设置存储用户登录信息（用户Token信息）的Cookie，只会通过HTTPS协议传递，如果是HTTP协议，Cookie不会被发送。注意，option.Cookie.SecurePolicy属性的默认值是Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
+
+                //设置存储用户登录信息（用户Token信息）的Cookie, CookieSecurePolicy.always:只会通过HTTPS协议传递，如果是HTTP协议，Cookie不会被发送。注意，option.Cookie.SecurePolicy属性的默认值是Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
+                option.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.None;
+                option.ExpireTimeSpan = TimeSpan.FromMinutes(240);
             });
 
             services.AddSingleton<IConfiguration>(Configuration);
