@@ -5,3 +5,63 @@ ESTestWeb 是搜索源代码的网站，用asp.net core 写成，需要连接 my
 mysql数据库的建表sql文件位于: ESTestWeb/ESTestWeb/data/中
 
 
+用kibana建Index语句如下：
+
+put /qgsourcefile
+{
+  
+    "mappings" : {
+      "properties" : {
+        "fileContent" : {
+          "type" : "text",
+	  "analyzer" : "ik_smart",	
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "fileLocation" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "fileName" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "fullFileName" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        },
+        "luaOrXml" : {
+          "type" : "long"
+        },
+        "strategyName" : {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword",
+              "ignore_above" : 256
+            }
+          }
+        }
+      }
+    }
+
+}
