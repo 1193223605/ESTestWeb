@@ -51,7 +51,7 @@
     <div class="form-group">
         <label for="exampleInputEmail1">请输入您要查找的内容(例如：订阅行情)</label>
         <input type="text" class="form-control" placeholder="查找内容" asp-for="KeyWord" style="width:90%;display: inline-block;">
-        <button type="submit" class="btn btn-primary" style="margin-top: -7px;width: 70px;">搜索</button>
+        <button type="submit" class="btn btn-primary" style="width: 70px;vertical-align:top">搜索</button>
         <small id="emailHelp" class="form-text text-muted">
             @resultStr   Powered by ElasticSearch + ASP.NET Core + Linux.
         </small>
@@ -121,7 +121,7 @@
         }
 
         <div class="text-left">
-            <ul class="pagination">
+            <ul class="pagination" style="flex-wrap:wrap">
                 <li><a href="/?pageIndex=1&keyword=@Model.KeyWord">首页</a></li>
                 <li><a href="/?pageIndex=@prePage&keyword=@Model.KeyWord">上一页</a></li>
 
